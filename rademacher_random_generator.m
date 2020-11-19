@@ -1,5 +1,6 @@
 function [gaussMatrix] = rademacher_random_generator(m, n)
 gaussMatrix = zeros(m, n);
-gaussMatrix = random('normal', 0, 1, size(gaussMatrix));
+mp = [-1 1]; 
+gaussMatrix(:) = mp((rand(1, (m * n))<.5)+1);
 end
 
