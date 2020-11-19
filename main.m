@@ -6,8 +6,10 @@ Issue with Frobenius norm trick.
 
 import img_process.*
 import gaussian_random_generator.*
+import rademacher_random_generator.*
 import rand_QB.*
 import blocked_rand_QB.*
+
 
 %{
 All parameters currently set for test_900x1400.png
@@ -26,9 +28,9 @@ s = 250;
 block_size = 25;
 power = 4;
 
-%[Q, B, error] = rand_QB(A, k, s);
+[Q, B, error] = rand_QB(A, k, s);
 %[Q, B, error] = blocked_rand_QB(A, block_size, epsillon, k, s);
-[Q, B, error] = blocked_rand_QB_power(A, block_size, epsillon, k, s, power);
+%[Q, B, error] = blocked_rand_QB_power(A, block_size, epsillon, k, s, power);
 %[Q, B, error] = blocked_rand_QB_large(A, block_size, epsillon, k, s);
 %[Q, B, error] = blocked_rand_QB_large_power(A, block_size, epsillon, k, s, power);
 
