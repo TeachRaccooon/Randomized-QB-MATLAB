@@ -42,7 +42,12 @@ OUTPUT PARAMETERS:
     where || denoted a Frobenius norm. However, it appears that the
     statement holds only if A = QB. In our case, QB only approximates A, so
     it seems that the error is not represented correctly. This statement is
-    yet to be revised.
+    yet to be revised. Due to this issue, the '_large' algorithms in this
+    repo may not be working correctly, as the current inability to perform
+    the "Frobenius norm trick" breaks the idea of minimizing the number of
+    passes through the original matrix A. For that reason, it is advised to
+    use '_large' algorithms as a fixed-rank solutions rather than a
+    fixed-error tolerance.
 
 Here, we pre-allocate space for Q and B using (k + s) as a parameter and "cut off"
 the unnecessary rows and columns if the desired accuracy of approximation

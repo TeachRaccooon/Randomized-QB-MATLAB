@@ -41,12 +41,13 @@ OUTPUT PARAMETERS:
     matrix U shall be multiplied by Q on the left to complete the
     procedure).
 
-    'error' - float - error of approximation A to QB. Here, an error is
+    'error' - float - error of approximation A to QB. Currently, measured
+    by |A - QB|, where || denoted a Frobenius norm. Here, an error may be
     computed using the following property: |A|^2-|B|^2 = |A - (Q*B)|^2,
     where || denoted a Frobenius norm. However, it appears that the
     statement holds only if A = QB. In our case, QB only approximates A, so
     it seems that the error is not represented correctly. This statement is
-    yet to be revised.
+    yet to be revised. 
 
 Here, we pre-allocate space for Q and B using (k + s) as a parameter and "cut off"
 the unnecessary rows and columns if the desired accuracy of approximation
@@ -61,11 +62,6 @@ function [Q, B, error] = blocked_rand_QB_power(A, block_size, epsillon, k, s, po
 
     [m, n] = size(A);
     l = k + s;
-    
-    %Properties of Frobenius norm allow us to use the precomputed norm(A)
-    %to achieve the desired result.
-    norm_A = norm(A, 'fro');
-    norm_A = norm_A * norm_A;
     
     %Allocating full Q and B
     Q = zeros(m, l);
@@ -118,11 +114,9 @@ function [Q, B, error] = blocked_rand_QB_power(A, block_size, epsillon, k, s, po
             B(((i - 1) * block_size + 1 : i * block_size), :) = B_i;
         end
 
-        norm_B = norm(B, 'fro');
-        norm_B = norm_B * norm_B;
-        error = norm_A - norm_B;
+        error = norm(A - (Q * B), 'fro');
         
-        if (error < (epsillon * epsillon))
+        if (error < epsillon)
             break
         end
     end
