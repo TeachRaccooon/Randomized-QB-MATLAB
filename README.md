@@ -3,7 +3,7 @@ In this work, you may observe a reference implementation of several fixed-precis
 
 This repository contains:
   1.Five randomized QB routines of different properties, detailed description of each is available inside of functions.
-  2.Random Gaussian matrix generator.
+  2.Random Gaussian matrix generator & Rademacher random matrix generator.
   3.Small image processing routine.
   4.Main file that is being used as a testing ground.
   5.A set of images that were used for testing purposes.
