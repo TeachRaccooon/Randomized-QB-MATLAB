@@ -1,6 +1,6 @@
 
 %{
-blocked_rand_QB_large_power - Blocked randomized algorithm for finding QB factorization of a
+randQB_B_FP_PE - Blocked randomized algorithm for finding QB factorization of a
 given matrix A. Iteratively assembles matrices Q and B with a step of
 block_size, terminates iterations if either the target rank "k" has been
 reached, or the difference berween A and QB, measured with Frobenius norm, 
@@ -9,10 +9,11 @@ matrix Q at each iteration to improve accuracy.
 
 Uses Gaussian Random matrix.
 
-Specifically suitable for matrix A with slowly decaying singular values.
-Uses power iterations to "strech" them out and achieve the result easier.
+This scheme is suitable for matrix A with slowly decaying singular values;
+power iterations allow to "strech" out the singular values and achieve 
+the result easier.
 
-Designed for cases with large matrix A so that the amount of passes through
+Is "pass efficient" - esigned for cases with large matrix A so that the amount of passes through
 its data is minimized. Hence, requires immediate computation of full random
 matrix Omega (using oversampling parameter s, where s is a small integer).
 
@@ -42,17 +43,17 @@ OUTPUT PARAMETERS:
     matrix U shall be multiplied by Q on the left to complete the
     procedure).
 
-    'error' - float - error of approximation A to QB. Here, an error is
+    'error' - float - error of approximation A to QB. Here, an error may be
     computed using the following property: |A|^2-|B|^2 = |A - (Q*B)|^2,
-    where || denoted a Frobenius norm. However, it appears that the
-    statement holds only if A = QB. In our case, QB only approximates A, so
-    it seems that the error is not represented correctly. This statement is
-    yet to be revised. Due to this issue, the '_large' algorithms in this
-    repo may not be working correctly, as the current inability to perform
-    the "Frobenius norm trick" breaks the idea of minimizing the number of
-    passes through the original matrix A. For that reason, it is advised to
-    use '_large' algorithms as a fixed-rank solutions rather than a
-    fixed-error tolerance.
+    where || denoted a Frobenius norm. 
+
+    'precise_rank' - int - low intrinsic rank of matrix A.
+
+This function is intended to represent a fixed-precision version of an
+algorithm, though, an option of specifying target rank is still available.
+If the estimate for target rank is unavailable, set parameters 'k' and 's'
+such that (k + s) = min(m, n), where m, n are number of rows and columns of
+matrix A, respectively. 
 
 Here, we pre-allocate space for Q and B using (k + s) as a parameter and "cut off"
 the unnecessary rows and columns if the desired accuracy of approximation
@@ -63,21 +64,22 @@ large matrices, mostly consisting of zero elements.
 
 Ref: https://pdfs.semanticscholar.org/99be/879787de8510c099d4a6b1539162b007e4c5.pdf
 %}
-function [Q, B, error] = blocked_rand_QB_large_power(A, block_size, epsillon, k, s, power)
+function [Q, B, error, precise_rank] = randQB_B_FP_PE(A, block_size, epsillon, k, s, power)
 
     [m, n] = size(A);
     l = k + s;
 
-    norm_A = norm(A, 'fro');
-    norm_A = norm_A * norm_A;
+    norm_A = norm(A, 'fro')^2;
+    threshold = epsillon ^ 2;
+    termination_flag = false;
     
     %computing a full random matrix
     Omega = gaussian_random_generator(n, k + s);
     
     %power iteartions
-    for  j = 1 : power - 1
-        G = orth(A * Omega);
-        Omega = orth(transpose(A) * G);
+    for  j = 1 : power
+        [G, ~] = qr(A * Omega, 0);
+        [Omega, ~] = qr(transpose(A) * G, 0);
     end
     
     G = A * Omega;
@@ -86,23 +88,28 @@ function [Q, B, error] = blocked_rand_QB_large_power(A, block_size, epsillon, k,
     %Allocating full Q and B
     Q = zeros(m, l);
     B = zeros(l, n);
-
+    
+    curr_idx = 1;
 
     for i = 1 : (l / block_size)
-
-        Omega_i = Omega(:, ((i - 1) * block_size + 1 : i * block_size));
+        Omega_i = Omega(:, curr_idx : curr_idx + block_size - 1);
         
         %at step 1, lost of computations are unnecessary
         if i == 1
-            Y_i = G(:, ((i - 1) * block_size + 1 : i * block_size));
+            Y_i = G(:, curr_idx : curr_idx + block_size - 1);
             [Q_i, R_i] = qr(Y_i, 0);
-            B_i = transpose(inv(R_i)) * transpose(H(:, ((i - 1) * block_size + 1 : i * block_size)));
+            B_i = transpose(R_i) \ transpose(H(:, curr_idx : curr_idx + block_size - 1));
 
             %Inserting new columns and rows into Q and B
             Q(:, (1 : block_size)) = Q_i;
             B((1 : block_size), :) = B_i;
+            
+            curr_idx = curr_idx + block_size;
         else
-            Y_i = G(:, ((i - 1) * block_size + 1 : i * block_size)) - (Q * (B * Omega_i));
+            
+            Temp = B * Omega_i;
+            
+            Y_i = G(:, curr_idx : curr_idx + block_size - 1) - (Q * Temp);
             [Q_i, R_] = qr(Y_i, 0);
             
             %reorthogonalization step
@@ -110,26 +117,48 @@ function [Q, B, error] = blocked_rand_QB_large_power(A, block_size, epsillon, k,
             [Q_i, R_i] = qr(Orthogonalization_buffer, 0);
             R_i = R_i * R_;
 
-            B_i = transpose(inv(R_i)) * (transpose(H(:, ((i - 1) * block_size + 1 : i * block_size))) - (transpose(Y_i) * Q * B) - ((transpose(Omega_i) * transpose(B)) * B));
+            B_i = transpose(R_i) \ (transpose(H(:, curr_idx : curr_idx + block_size - 1)) - (transpose(Y_i) * Q) * B - (transpose(Temp) * B));
 
             %Inserting new columns and rows into Q and B
-            Q(:, ((i - 1) * block_size + 1 : i * block_size)) = Q_i;   
-            B(((i - 1) * block_size + 1 : i * block_size), :) = B_i;
+            Q(:, curr_idx : curr_idx + block_size - 1) = Q_i;   
+            B(curr_idx : curr_idx + block_size - 1, :) = B_i;
+            
+            curr_idx = curr_idx + block_size;
         end
 
-        norm_B = norm(B, 'fro');
-        norm_B = norm_B * norm_B;
+        norm_B = norm(B_i, 'fro')^2;
         error = norm_A - norm_B;
         
-        if (error < (epsillon * epsillon))
-            break
+        %precise rank determination
+        if error < threshold   
+            for j = 1 : block_size
+                norm_A = norm_A - norm(B_i(j,:))^2;
+                if norm_A < threshold
+                    termination_flag = true;
+                    break;
+                end
+            end
+        else
+            norm_A = error;
         end
+        if termination_flag
+            precise_rank = (i - 1) * block_size + j;
+            break;
+        end
+    end
+    
+    if ~termination_flag
+        precise_rank = i * block_size;
     end
     
     %Getting rid of extra columns and rows with zero values
     if(i ~= (l / block_size))
         Q = Q(:, 1 : i * block_size);
         B = B(1 : i * block_size, :);
+    end
+    
+    if i == n
+        fprintf('Approximation error = %f. Fail to converge within the specified toletance\n\n', sqrt(E));
     end
 end
 

@@ -1,12 +1,15 @@
 %{
-blocked_rand_QB - Blocked randomized algorithm for finding QB factorization of a
+rand_QB_B_FR - Blocked randomized algorithm for finding QB factorization of a
 given matrix A. Iteratively computes matrices Q and B with a step of
 block_size, terminates iterations if either the target rank "k + s" has been
-reached, or the difference berween A and QB, measured with Frobenius norm, 
-has gotten smaller than parameter "epsillon". Uses reorthogonalization of 
-matrix Q at each iteration to improve accuracy.
+reached. Uses reorthogonalization of matrix Q at each iteration to improve accuracy.
 
-Uses Gaussian Random matrix.
+This scheme is suitable for matrix A with slowly decaying singular values;
+power iterations allow to "strech" out the singular values and achieve 
+the result easier. Power iteration approach is taken from:
+http://people.maths.ox.ac.uk/martinsson/Pubs/2015_randQB.pdf
+
+Uses Gaussian Random Projection matrix.
 
 INPUT PARAMETERS:
     'A' - mat - initial data matrix.
@@ -14,12 +17,13 @@ INPUT PARAMETERS:
     'block_size' - int - the number of rows of B and columns of Q to be prodced at
     each iteartion.
 
-    'epsillon' - float - tolerance level for the approximation QB to A.
-
     'k' - int - estimate for the low intrinsic rank of A.
 
     's' - int - oversampling parameter such that (k + s) <= min(rows(A),
     cols(A)).
+
+    'power' - int - the number of power iterations. If power scheme is not
+    used, set parameter to 0.
 
 OUTPUT PARAMETERS:
     'Q' - mat - orthonormal matrix of with the number of rows same as A and
@@ -32,13 +36,12 @@ OUTPUT PARAMETERS:
     matrix U shall be multiplied by Q on the left to complete the
     procedure).
 
-    'error' - float - error of approximation A to QB. Currently, measured
-    by |A - QB|, where || denoted a Frobenius norm. Here, an error may be
+    'error' - float - error of approximation A to QB. Here, an error may be
     computed using the following property: |A|^2-|B|^2 = |A - (Q*B)|^2,
-    where || denoted a Frobenius norm. However, it appears that the
-    statement holds only if A = QB. In our case, QB only approximates A, so
-    it seems that the error is not represented correctly. This statement is
-    yet to be revised. 
+    where || denoted a Frobenius norm. 
+
+This function is intended to represent a fixed-rank version of an
+algorithm.
 
 Here, we pre-allocate space for Q and B using (k + s) as a parameter and "cut off"
 the unnecessary rows and columns if the desired accuracy of approximation
@@ -50,10 +53,13 @@ large matrices, mostly consisting of zero elements.
 
 Ref: https://pdfs.semanticscholar.org/99be/879787de8510c099d4a6b1539162b007e4c5.pdf
 %}
-function [Q, B, error] = blocked_rand_QB(A, block_size, epsillon, k, s)
 
+function [Q, B, error] = rand_QB_B_FR(A, block_size, k, s)
+    
     [m, n] = size(A);
     l = k + s;
+    
+    norm_A = norm(A, 'fro') ^ 2;
     
     %Allocating full Q and B
     Q = zeros(m, l);
@@ -74,6 +80,12 @@ function [Q, B, error] = blocked_rand_QB(A, block_size, epsillon, k, s)
             %}
             [Q_i, ~] = qr(A * Omega_i, 0);
             
+            %power iterations
+            for j = 1 : power
+                [Q_i, ~] = qr(transpose(A) * Q_i, 0);
+                [Q_i, ~] = qr(A * Q_i, 0);
+            end
+            
             B_i = transpose(Q_i) * A;
             
             %Inserting new columns and rows into Q and B
@@ -81,30 +93,36 @@ function [Q, B, error] = blocked_rand_QB(A, block_size, epsillon, k, s)
             B((1 : block_size), :) = B_i;
         else
             Orthogonalization_buffer = (A * Omega_i) - (Q * (B * Omega_i));
+            
             [Q_i, ~] = qr(Orthogonalization_buffer, 0);
+            
+            %power iterations
+            for j = 1 : power
+                [Q_i, ~] = qr(transpose(A) * Q_i - transpose(B) * (transpose(Q) * Q_i), 0);
+                [Q_i, ~] = qr(A * Q_i - Q * (B * Q_i), 0);
+            end
             
             %reorthogonalization step
             Reorthogonalization_buffer = Q_i - (Q * (transpose(Q) * Q_i));
             [Q_i, ~] = qr(Reorthogonalization_buffer, 0);
 
-            B_i = transpose(Q_i) * A;
+            B_i = transpose(Q_i) * A - transpose(Q_i) * Q * B;
             
             %Inserting new columns and rows into Q and B
             Q(:, ((i - 1) * block_size + 1 : i * block_size)) = Q_i;   
             B(((i - 1) * block_size + 1 : i * block_size), :) = B_i;
         end
-
-        error = norm(A - (Q * B), 'fro');
         
-        if (error < epsillon)
-            break
-        end
+        norm_B = norm(B_i, 'fro')^2;
+        norm_A = norm_A - norm_B;
+        error = norm_A;
     end
-
+    
     %Getting rid of extra columns and rows with zero values
     if(i ~= (l / block_size))
         Q = Q(:, 1 : i * block_size);
         B = B(1 : i * block_size, :);
     end
+    
 end
 

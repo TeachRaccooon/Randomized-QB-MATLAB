@@ -21,20 +21,16 @@ OUTPUT PARAMETERS:
     matrix U shall be multiplied by Q on the left to complete the
     procedure).
 
-    'error' - float - error of approximation A to QB. Currently, measured
-    by |A - QB|, where || denoted a Frobenius norm. Here, an error may be
+    'error' - float - error of approximation A to QB. Here, an error may be
     computed using the following property: |A|^2-|B|^2 = |A - (Q*B)|^2,
-    where || denoted a Frobenius norm. However, it appears that the
-    statement holds only if A = QB. In our case, QB only approximates A, so
-    it seems that the error is not represented correctly. This statement is
-    yet to be revised. 
+    where || denoted a Frobenius norm. 
 
 OUTPUT PARAMETERS:
 %}
 function [Q, B, error] = rand_QB(A, k, s)
     [~, n] = size(A);
     Omega = gaussian_random_generator(n, k + s);
-    Q = orth(A * Omega);
+    [Q, ~] = qr(A * Omega, 0);
     B = transpose(Q) * A;
     
     error = norm(A - (Q * B), 'fro');
