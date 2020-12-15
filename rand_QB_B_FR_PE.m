@@ -1,13 +1,8 @@
-
 %{
 randQB_B_FP_PE - Blocked randomized algorithm for finding QB factorization of a
-given matrix A. Iteratively assembles matrices Q and B with a step of
-block_size, terminates iterations if either the target rank "k" has been
-reached, or the difference berween A and QB, measured with Frobenius norm, 
-has gotten smaller than parameter "epsillon". Uses reorthogonalization of 
-matrix Q at each iteration to improve accuracy.
-
-Uses Gaussian Random matrix.
+given matrix A. Iteratively computes matrices Q and B with a step of
+block_size, terminates iterations if either the target rank "k + s" has been
+reached. Uses reorthogonalization of matrix Q at each iteration to improve accuracy.
 
 This scheme is suitable for matrix A with slowly decaying singular values;
 power iterations allow to "strech" out the singular values and achieve 
@@ -16,6 +11,8 @@ the result easier.
 Is "pass efficient" - esigned for cases with large matrix A so that the amount of passes through
 its data is minimized. Hence, requires immediate computation of full random
 matrix Omega (using oversampling parameter s, where s is a small integer).
+
+Uses Gaussian Random Projection matrix.
 
 INPUT PARAMETERS:
     'A' - mat - initial data matrix.
@@ -47,13 +44,8 @@ OUTPUT PARAMETERS:
     computed using the following property: |A|^2-|B|^2 = |A - (Q*B)|^2,
     where || denoted a Frobenius norm. 
 
-    'precise_rank' - int - low intrinsic rank of matrix A.
-
-This function is intended to represent a fixed-precision version of an
-algorithm, though, an option of specifying target rank is still available.
-If the estimate for target rank is unavailable, set parameters 'k' and 's'
-such that (k + s) = min(m, n), where m, n are number of rows and columns of
-matrix A, respectively. 
+This function is intended to represent a fixed-rank version of an
+algorithm.
 
 Here, we pre-allocate space for Q and B using (k + s) as a parameter and "cut off"
 the unnecessary rows and columns if the desired accuracy of approximation
@@ -64,14 +56,12 @@ large matrices, mostly consisting of zero elements.
 
 Ref: https://pdfs.semanticscholar.org/99be/879787de8510c099d4a6b1539162b007e4c5.pdf
 %}
-function [Q, B, error, precise_rank] = randQB_B_FP_PE(A, block_size, epsillon, k, s, power)
+function [Q, B, error] = rand_QB_B_FR_PE(A, block_size, k, s, power)
 
     [m, n] = size(A);
     l = k + s;
 
     norm_A = norm(A, 'fro')^2;
-    threshold = epsillon ^ 2;
-    termination_flag = false;
     
     %computing a full random matrix
     Omega = gaussian_random_generator(n, k + s);
@@ -127,38 +117,8 @@ function [Q, B, error, precise_rank] = randQB_B_FP_PE(A, block_size, epsillon, k
         end
 
         norm_B = norm(B_i, 'fro')^2;
-        error = norm_A - norm_B;
-        
-        %precise rank determination
-        if error < threshold   
-            for j = 1 : block_size
-                norm_A = norm_A - norm(B_i(j,:))^2;
-                if norm_A < threshold
-                    termination_flag = true;
-                    break;
-                end
-            end
-        else
-            norm_A = error;
-        end
-        if termination_flag
-            precise_rank = (i - 1) * block_size + j;
-            break;
-        end
-    end
-    
-    if ~termination_flag
-        precise_rank = i * block_size;
-    end
-    
-    %Getting rid of extra columns and rows with zero values
-    if(i ~= (l / block_size))
-        Q = Q(:, 1 : i * block_size);
-        B = B(1 : i * block_size, :);
-    end
-    
-    if i == n
-        fprintf('Approximation error = %f. Fail to converge within the specified toletance\n\n', sqrt(E));
+        norm_A = norm_A - norm_B;
+        error = norm_A;
     end
 end
 

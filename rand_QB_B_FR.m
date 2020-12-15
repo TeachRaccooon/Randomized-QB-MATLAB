@@ -54,7 +54,7 @@ large matrices, mostly consisting of zero elements.
 Ref: https://pdfs.semanticscholar.org/99be/879787de8510c099d4a6b1539162b007e4c5.pdf
 %}
 
-function [Q, B, error] = rand_QB_B_FR(A, block_size, k, s)
+function [Q, B, error] = rand_QB_B_FR(A, block_size, k, s, power)
     
     [m, n] = size(A);
     l = k + s;

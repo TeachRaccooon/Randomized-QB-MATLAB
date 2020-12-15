@@ -63,7 +63,7 @@ large matrices, mostly consisting of zero elements.
 Ref: https://pdfs.semanticscholar.org/99be/879787de8510c099d4a6b1539162b007e4c5.pdf
 %}
 
-function [Q, B, error, precise_rank] = rand_QB_B_FP(A, block_size, epsillon, k, s)
+function [Q, B, norm_A, precise_rank] = rand_QB_B_FP(A, block_size, epsillon, k, s, power)
     
     [m, n] = size(A);
     l = k + s;
@@ -158,7 +158,7 @@ function [Q, B, error, precise_rank] = rand_QB_B_FP(A, block_size, epsillon, k, 
     end
     
     if i == n
-        fprintf('Approximation error = %f. Fail to converge within the specified toletance\n\n', sqrt(E));
+        fprintf('Approximation error = %f. Fail to converge within the specified toletance\n\n', sqrt(error));
     end
 end
 
