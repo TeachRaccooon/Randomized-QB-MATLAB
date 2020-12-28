@@ -43,9 +43,9 @@ OUTPUT PARAMETERS:
 This function is intended to represent a fixed-rank version of an
 algorithm.
 
-Here, we pre-allocate space for Q and B using (k + s) as a parameter and "cut off"
-the unnecessary rows and columns if the desired accuracy of approximation
-has been reached prior to reaching the specifried traget rank. This seems
+Here, an initial idea was to pre-allocate space for Q and B using (k + s)
+as a parameter and "cut off" the unnecessary rows and columns if the desired accuracy 
+of approximation has been reached prior to reaching the specifried traget rank. This seems
 like a less expensive way than building Q and B by appending new rows and
 columns at each iteration, though it requires having multiplications of
 large matrices, mostly consisting of zero elements.
@@ -55,22 +55,31 @@ Ref: https://pdfs.semanticscholar.org/99be/879787de8510c099d4a6b1539162b007e4c5.
 %}
 
 function [Q, B, error] = rand_QB_B_FR(A, block_size, k, s, power)
-    
-    [m, n] = size(A);
-    l = k + s;
-    
-    norm_A = norm(A, 'fro') ^ 2;
-    
-    %Allocating full Q and B
-    Q = zeros(m, l);
-    B = zeros(l, n);
 
-    for i = 1 : ((l / block_size))
+    norm_A = norm(A, 'fro');
+    if norm_A == 0
+        return
+    end
+    
+    class_A = class(A);
+    [m, n] = size(A);
+    max_dim = k + s;
+    
+    norm_B = 0;
+    block_size_init = block_size;
+    
+    approximation_error = zeros(0, 0, class_A);
+    
+    Q = zeros(m, 0, class_A);
+    B = zeros(0, n, class_A);
+    
+    % max_dim is never eceeded by dynamic block_size
+    for i = 1 : ((max_dim / block_size))
         
-        %computing a small random matrix at each step
-        Omega_i = gaussian_random_generator(n, block_size);
+        % Computing a small random matrix at each step
+        Omega_i = gaussian_random_generator(n, block_size, class_A);
         
-        %at step 1, lost of computations are unnecessary
+        % At step 1, lost of computations are unnecessary
         if i == 1
             %{
             Here and in the similar cases the economy QR is used instead
@@ -88,9 +97,11 @@ function [Q, B, error] = rand_QB_B_FR(A, block_size, k, s, power)
             
             B_i = transpose(Q_i) * A;
             
-            %Inserting new columns and rows into Q and B
-            Q(:, (1 : block_size)) = Q_i;
-            B((1 : block_size), :) = B_i;
+            Q = [Q, Q_i]; %#ok<AGROW>
+            B = [B; B_i]; %#ok<AGROW>
+            
+            B_rows = size(B, 1);
+            
         else
             Orthogonalization_buffer = (A * Omega_i) - (Q * (B * Omega_i));
             
@@ -109,20 +120,40 @@ function [Q, B, error] = rand_QB_B_FR(A, block_size, k, s, power)
             B_i = transpose(Q_i) * A - transpose(Q_i) * Q * B;
             
             %Inserting new columns and rows into Q and B
-            Q(:, ((i - 1) * block_size + 1 : i * block_size)) = Q_i;   
-            B(((i - 1) * block_size + 1 : i * block_size), :) = B_i;
+            
+            Q = [Q, Q_i]; %#ok<AGROW>
+            B = [B; B_i]; %#ok<AGROW>
+            
+            B_rows = size(B, 1);
+            
         end
         
-        norm_B = norm(B_i, 'fro')^2;
-        norm_A = norm_A - norm_B;
-        error = norm_A;
+        % Computing current error approximation with Frobenius norm, and
+        % normalizing by norm of A.
+        norm_B = hypot(norm_B, norm(B_i, 'fro'));
+        approximation_error(i,1) = sqrt(abs(norm_A - norm_B) * (norm_A + norm_B)) / norm_A;
+        
+        % If the approximation error of the current step is larger than the
+        % previous, undo the most current step and terminate execution.
+        if (i > 1) && (approximation_error(i) > approximation_error(i-1))
+            Q(:, end - block_size + 1 : end) = [];
+            B(end - block_size + 1 : end, :) = [];
+            approximation_error(i) = [];
+            break
+        end
+        
+        
+        % If the approximation error did not decrease fast enough in
+        % regards to the previous step, increase the block size by its
+        % initial value.
+        if (i > 1) && (approximation_error(i) > approximation_error(i - 1) / 2)
+            block_size = min(block_size + block_size_init, max(max_dim - B_rows, 1));
+        end
     end
     
-    %Getting rid of extra columns and rows with zero values
-    if(i ~= (l / block_size))
-        Q = Q(:, 1 : i * block_size);
-        B = B(1 : i * block_size, :);
-    end
+    %TODO: this is only for reference - remove. Return approximation_error
+    %instead of error.
+    error = approximation_error(end);
     
 end
 

@@ -68,6 +68,11 @@ Ref: https://pdfs.semanticscholar.org/99be/879787de8510c099d4a6b1539162b007e4c5.
 
 function [Q, B, error, precise_rank] = rand_QB_B_FP(A, block_size, threshold, k, s, power)
     
+    norm_A = norm(A, 'fro');
+    if norm_A == 0
+        return
+    end
+    
     precise_rank = 0;
 
     class_A = class(A);
@@ -75,19 +80,12 @@ function [Q, B, error, precise_rank] = rand_QB_B_FP(A, block_size, threshold, k,
     max_dim = k + s;
     block_size_init = block_size;
     
-    norm_A = norm(A, 'fro');
     norm_B = 0;
-    
-    if norm_A == 0
-        return
-    end
     
     approximation_error = zeros(0, 0, class_A);
     
     Q = zeros(m, 0, class_A);
     B = zeros(0, n, class_A);
-    
-    
     
     % max_dim is never eceeded by dynamic block_size
     for i = 1 : ((max_dim / block_size))
@@ -140,8 +138,7 @@ function [Q, B, error, precise_rank] = rand_QB_B_FP(A, block_size, threshold, k,
             Q = [Q, Q_i]; %#ok<AGROW>
             B = [B; B_i]; %#ok<AGROW>
             
-            B_rows = size(B, 1);
-            
+            B_rows = size(B, 1);        
         end
         
         % Computing current error approximation with Frobenius norm, and
@@ -157,7 +154,6 @@ function [Q, B, error, precise_rank] = rand_QB_B_FP(A, block_size, threshold, k,
         
         % If the approximation error of the current step is larger than the
         % previous, undo the most current step and terminate execution.
-        
         if (i > 1) && (approximation_error(i) > approximation_error(i-1))
             Q(:, end - block_size + 1 : end) = [];
             B(end - block_size + 1 : end, :) = [];
@@ -175,7 +171,8 @@ function [Q, B, error, precise_rank] = rand_QB_B_FP(A, block_size, threshold, k,
         
     end
     
-    %TODO: this is only for reference - remove.
+    %TODO: this is only for reference - remove. Return approximation_error
+    %instead of error.
     error = approximation_error(end);
     
     if i == n
