@@ -21,7 +21,8 @@ INPUT PARAMETERS:
 
     'epsillon' - float - tolerance level for the approximation QB to A.
 
-    'k' - int - estimate for the low intrinsic rank of A.
+    'k' - int - estimate for the low intrinsic rank of A. If unknown, set
+    to min(m, n).
 
     's' - int - oversampling parameter such that (k + s) <= min(rows(A),
     cols(A)).
@@ -44,7 +45,8 @@ OUTPUT PARAMETERS:
     computed using the following property: |A|^2-|B|^2 = |A - (Q*B)|^2,
     where || denoted a Frobenius norm. 
 
-    'precise_rank' - int - low intrinsic rank of matrix A.
+    'precise_rank' - int - low intrinsic rank of matrix A, deduced via
+    error.
 
 This function is intended to represent a fixed-precision version of an
 algorithm, though, an option of specifying target rank is still available.
@@ -131,7 +133,7 @@ function [Q, B, error, precise_rank] = rand_QB_B_FP(A, block_size, threshold, k,
             Reorthogonalization_buffer = Q_i - (Q * (transpose(Q) * Q_i));
             [Q_i, ~] = qr(Reorthogonalization_buffer, 0);
 
-            B_i = transpose(Q_i) * A - transpose(Q_i) * Q * B;
+            B_i = transpose(Q_i) * A; %- transpose(Q_i) * Q * B;
             
             %Inserting new columns and rows into Q and B
             

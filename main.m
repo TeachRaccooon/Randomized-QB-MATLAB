@@ -1,39 +1,35 @@
-%{
-TODO:
-Issue with power iterations with blocked_rand_QB_power.
-Issue with Frobenius norm trick.
-%}
-
 import img_process.*
 import gaussian_random_generator.*
 import rademacher_random_generator.*
+
 import rand_QB.*
-import blocked_rand_QB.*
+import rand_QB_SP.*
+import rand_QB_B_FP.*
+import rand_QB_B_FR.*
+import rand_QB_B_FP_PE.*
+import rand_QB_B_FR_PE.*
 
+import test_basic_qb.*
+import test_compare_alg.*
+import test_signle_pass.*
 
-%{
-All parameters currently set for test_900x1400.png
-If using different matrix object, change k, s, epsillon, block_size and
-power manually.
-All parameter descriptions are available inside the functions.
-%}
+% CHOOSE THE TEST MATRIX
+%filename = 'test_1500x1000.png';
+%A = img_process(filename);
+%A = gallery('cauchy', 600); % binomial, chow, dorr, frank, gcdmat, grcar, hanowa, house
+%[A, S] = gen_three_test(2000, 2000, 1);
+%[A, S] = gen_exp_test(2000, 2000, 125);
 
-filename = 'test_900x1400.png';
-A = img_process(filename);
+% SET THE FUNCTION PARAMETERS
+epsillon = 0.00000001;
+k = 40;
+s = 10;
+block_size = 10;
+power = 0;
+numiters = 50;
 
-[m, n] = size(A);
-epsillon = 0.001;
-k = 1400;
-s = 0;
-block_size = 25;
-power = 4;
-
-[Q, B, error] = rand_QB(A, k, s);
-%[Q, B, error] = blocked_rand_QB(A, block_size, epsillon, k, s);
-%[Q, B, error] = blocked_rand_QB_power(A, block_size, epsillon, k, s, power);
-%[Q, B, error] = blocked_rand_QB_large(A, block_size, epsillon, k, s);
-%[Q, B, error] = blocked_rand_QB_large_power(A, block_size, epsillon, k, s, power);
-
-disp(error);
-
+% RUN TESTS
+%test_signle_pass(A, S, k, s, numiters);
+%test_basic_qb(A, S, k, s, numiters);
+%test_compare_alg(A, S, block_size, k, s, numiters);
 

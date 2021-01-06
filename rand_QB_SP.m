@@ -1,6 +1,7 @@
 %{
-rand_QB - Basic randomized algorithm for finding QB factorization of a
-given matrix A. 
+rand_QB_SP - Basic randomized algorithm for finding QB factorization of a
+given matrix A, done in a single pass. Hence, power iterations are not
+used.
 
 INPUT PARAMETERS:
     'A' - mat - initial data matrix.
@@ -9,9 +10,6 @@ INPUT PARAMETERS:
 
     's' - int - oversampling parameter such that (k + s) <= min(rows(A),
     cols(A)).
-
-    'power' - int - the number of power iterations. If power scheme is not
-    used, set parameter to 0.
 
 OUTPUT PARAMETERS:
     'Q' - mat - orthonormal matrix of with the number of rows same as A and
@@ -26,24 +24,23 @@ OUTPUT PARAMETERS:
 
     'error' - float - error of approximation A to QB. Here, an error may be
     computed using the following property: |A|^2-|B|^2 = |A - (Q*B)|^2,
-    where || denotes a Frobenius norm. 
+    where || denoted a Frobenius norm. 
 %}
-function [Q, B, error] = rand_QB(A, k, s, power)
+function [Q, B, error] = rand_QB_SP(A, k, s)
 
     class_A = class(A);
-    [~, n] = size(A);
+    [m, n] = size(A);
     
     Omega = gaussian_random_generator(n, k + s, class_A);
+    Omega_ = gaussian_random_generator(m, k + s, class_A);
     
-    [Q, ~] = qr(A * Omega, 0);
+    Y = A * Omega;
+    Y_ = transpose(A) * Omega_;
     
-    for j = 1 : power
-        [Q, ~] = qr(transpose(A) * Q, 0);
-        [Q, ~] = qr(A * Q, 0);
-    end
+    [Q, ~] = qr(Y, 0);
+    [Q_, ~] = qr(Y_, 0);  
     
-    B = transpose(Q) * A;
+    B = ((transpose(Omega_)*Q)\(transpose(Y_)*Q_))*transpose(Q_);
     
     error = norm(A - (Q * B), 'fro');
 end
-

@@ -117,7 +117,7 @@ function [Q, B, error] = rand_QB_B_FR(A, block_size, k, s, power)
             Reorthogonalization_buffer = Q_i - (Q * (transpose(Q) * Q_i));
             [Q_i, ~] = qr(Reorthogonalization_buffer, 0);
 
-            B_i = transpose(Q_i) * A - transpose(Q_i) * Q * B;
+            B_i = transpose(Q_i) * A; % - transpose(Q_i) * Q * B;
             
             %Inserting new columns and rows into Q and B
             

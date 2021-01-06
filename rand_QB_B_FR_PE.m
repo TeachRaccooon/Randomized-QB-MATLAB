@@ -56,15 +56,29 @@ large matrices, mostly consisting of zero elements.
 
 Ref: https://pdfs.semanticscholar.org/99be/879787de8510c099d4a6b1539162b007e4c5.pdf
 %}
-function [Q, B, error] = rand_QB_B_FR_PE(A, block_size, k, s, power)
-
-    [m, n] = size(A);
-    l = k + s;
-
+function [Q, B, error, precise_rank] = rand_QB_B_FR_PE(A, block_size, k, s, power)
+    
     norm_A = norm(A, 'fro')^2;
+    if norm_A == 0
+        return
+    end
+    
+    precise_rank = 0;
+
+    class_A = class(A);
+    [m, n] = size(A);
+    max_dim = k + s;
+    block_size_init = block_size;
+    
+    norm_B = 0;
+    
+    approximation_error = zeros(0, 0, class_A);
+    
+    Q = zeros(m, 0, class_A);
+    B = zeros(0, n, class_A);
     
     %computing a full random matrix
-    Omega = gaussian_random_generator(n, k + s);
+    Omega = gaussian_random_generator(n, k + s, class_A);
     
     %power iteartions
     for  j = 1 : power
@@ -75,13 +89,9 @@ function [Q, B, error] = rand_QB_B_FR_PE(A, block_size, k, s, power)
     G = A * Omega;
     H = transpose(A) * G;
     
-    %Allocating full Q and B
-    Q = zeros(m, l);
-    B = zeros(l, n);
-    
     curr_idx = 1;
 
-    for i = 1 : (l / block_size)
+    for i = 1 : (max_dim / block_size)
         Omega_i = Omega(:, curr_idx : curr_idx + block_size - 1);
         
         %at step 1, lost of computations are unnecessary
@@ -90,11 +100,11 @@ function [Q, B, error] = rand_QB_B_FR_PE(A, block_size, k, s, power)
             [Q_i, R_i] = qr(Y_i, 0);
             B_i = transpose(R_i) \ transpose(H(:, curr_idx : curr_idx + block_size - 1));
 
-            %Inserting new columns and rows into Q and B
-            Q(:, (1 : block_size)) = Q_i;
-            B((1 : block_size), :) = B_i;
+            Q = [Q, Q_i]; %#ok<AGROW>
+            B = [B; B_i]; %#ok<AGROW>
             
             curr_idx = curr_idx + block_size;
+            B_rows = curr_idx;
         else
             
             Temp = B * Omega_i;
@@ -114,11 +124,39 @@ function [Q, B, error] = rand_QB_B_FR_PE(A, block_size, k, s, power)
             B(curr_idx : curr_idx + block_size - 1, :) = B_i;
             
             curr_idx = curr_idx + block_size;
+            B_rows = curr_idx;
         end
 
-        norm_B = norm(B_i, 'fro')^2;
-        norm_A = norm_A - norm_B;
-        error = norm_A;
+        % Computing current error approximation with Frobenius norm, and
+        % normalizing by norm of A.
+        norm_B = hypot(norm_B, norm(B_i, 'fro'));
+        approximation_error(i,1) = sqrt(abs(norm_A - norm_B) * (norm_A + norm_B)) / norm_A;
+        
+        % If the approximation error of the current step is larger than the
+        % previous, undo the most current step and terminate execution.
+        if (i > 1) && (approximation_error(i) > approximation_error(i-1))
+            Q(:, end - block_size + 1 : end) = [];
+            B(end - block_size + 1 : end, :) = [];
+            approximation_error(i) = [];
+            break
+        end
+        
+        
+        % If the approximation error did not decrease fast enough in
+        % regards to the previous step, increase the block size by its
+        % initial value.
+        
+        %{
+        BE CAREFUL WITH EXCEEDING BOUNDS
+        if (i > 1) && (approximation_error(i) > approximation_error(i - 1) / 2)
+            block_size = min(block_size + block_size_init, max(max_dim - B_rows, 1));
+        end
+        %}
+        
     end
+    
+    %TODO: this is only for reference - remove. Return approximation_error
+    %instead of error.
+    error = approximation_error(end);
 end
 
