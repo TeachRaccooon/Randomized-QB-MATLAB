@@ -160,9 +160,13 @@ function [Q, B, error, precise_rank] = rand_QB_B_FP_PE(A, block_size, threshold,
         % If the approximation error did not decrease fast enough in
         % regards to the previous step, increase the block size by its
         % initial value.
+        
+        %{
+        BE CAREFUL WITH EXCEEDING BOUNDS
         if (i > 1) && (approximation_error(i) > approximation_error(i - 1) / 2)
             block_size = min(block_size + block_size_init, max(max_dim - B_rows, 1));
         end
+        %}
         
     end
     
