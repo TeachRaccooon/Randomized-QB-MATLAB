@@ -66,7 +66,7 @@ Ref: https://pdfs.semanticscholar.org/99be/879787de8510c099d4a6b1539162b007e4c5.
 %}
 function [Q, B, error, precise_rank] = rand_QB_B_FP_PE(A, block_size, threshold, k, s, power)
     
-    norm_A = norm(A, 'fro')^2;
+    norm_A = norm(A, 'fro');
     if norm_A == 0
         return
     end
@@ -129,8 +129,8 @@ function [Q, B, error, precise_rank] = rand_QB_B_FP_PE(A, block_size, threshold,
             B_i = transpose(R_i) \ (transpose(H(:, curr_idx : curr_idx + block_size - 1)) - (transpose(Y_i) * Q) * B - (transpose(Temp) * B));
 
             %Inserting new columns and rows into Q and B
-            Q(:, curr_idx : curr_idx + block_size - 1) = Q_i;   
-            B(curr_idx : curr_idx + block_size - 1, :) = B_i;
+            Q = [Q, Q_i]; %#ok<AGROW>
+            B = [B; B_i]; %#ok<AGROW>
             
             curr_idx = curr_idx + block_size;
             B_rows = curr_idx;
@@ -175,7 +175,7 @@ function [Q, B, error, precise_rank] = rand_QB_B_FP_PE(A, block_size, threshold,
     error = approximation_error(end);
     
     if i == n
-        fprintf('Approximation error = %f. Fail to converge within the specified toletance\n\n', approximation_error(end) / norm_A);
+        fprintf('Approximation error = %f. Fail to converge within the specified tolerance.\n\n', approximation_error(end) / norm_A);
     end
     
 end

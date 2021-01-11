@@ -178,7 +178,7 @@ function [Q, B, error, precise_rank] = rand_QB_B_FP(A, block_size, threshold, k,
     error = approximation_error(end);
     
     if i == n
-        fprintf('Approximation error = %f. Fail to converge within the specified toletance\n\n', approximation_error(end) / norm_A);
+        fprintf('Approximation error = %f. Fail to converge within the specified tolerance.\n\n', approximation_error(end) / norm_A);
     end
     
 end
