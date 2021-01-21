@@ -21,8 +21,8 @@ for i = 1:numiters
     [~, B_SP] = rand_QB_SP(A, k, s);
     S_SP = svd(B_SP);
     S_SP = S_SP(1 : full_length);
-    p2 = plot(X, S_SP, 'b');
-    p2.Color(4) = 0.1;
+    p1 = plot(X, S_SP, 'b');
+    p1.Color(4) = 0.1;
     
 end
 

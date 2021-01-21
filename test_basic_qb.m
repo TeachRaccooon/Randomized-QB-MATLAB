@@ -34,8 +34,8 @@ for i = 1:numiters
     [~, B_pow_2] = rand_QB(A, k, s, 2);
     S_hat_pow_2 = svd(B_pow_2);
     S_hat_pow_2 = S_hat_pow_2(1 : full_length);
-    p2 = plot(X, S_hat_pow_2, 'b');
-    p2.Color(4) = 0.1;
+    p3 = plot(X, S_hat_pow_2, 'b');
+    p3.Color(4) = 0.1;
 
 end
 
