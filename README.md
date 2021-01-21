@@ -24,3 +24,9 @@ Ref:
   [3] P.-G. Martinsson and S. Voronin, A randomized blocked algorithm for efficiently computing
       rank-revealing factorizations of matrices, SIAM J. Sci. Comput., 38 (2016), pp. S485–S507.
       (http://people.maths.ox.ac.uk/martinsson/Pubs/2015_randQB.pdf)
+      
+  [4] Y. Nakatsukasa, Fast and stable randomized low-rank matrix
+      approximation, (2020).
+      (https://arxiv.org/pdf/2009.11392.pdf)
+      
+  
