@@ -2,13 +2,14 @@
 In this work, you may observe a reference implementation of several fixed-precision randomized QB factorization algorithms for matrices of real values.
 
 This repository contains:
-  1.Six randomized QB routines of different properties, detailed description of each is available inside of functions.
+  1.Six randomized QB routines of different properties, detailed description of each is available inside of functions + Generalized Nystrom algorithm routine for low-rank matrix approximation.
   2.Gaussian random matrix generator & Rademacher random matrix generator.
   3.Small image processing routine.
   4.Main file that is being used as a testing ground.
-  5.Three test files that plot results of rand QB routines executions.
-  6.Two test matrix generation routines.
-  7.An image to be used for testing pusposes.
+  5.Three test files that plot results of rand QB routines executions in terms of accuracy.
+  6.Test file for timing rand QB and Nystrom algorithms.
+  7.Three test matrix generation routines.
+  8.An image to be used for testing pusposes.
   
 Ref:
   [1] N. Halko, P.-G. Martinsson, and J. A. Tropp, Finding structure with randomness: 
